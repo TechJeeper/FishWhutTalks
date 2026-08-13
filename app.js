@@ -307,20 +307,36 @@
   }
 
   async function fetchViaProxy(url) {
-    const proxies = [
-      (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-      (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    ];
-    let lastErr;
-    for (const make of proxies) {
-      try {
-        const res = await fetch(make(url), { signal: AbortSignal.timeout(20000) });
+    const attempts = [
+      async (u) => {
+        // JSON wrapper usually sends CORS headers; /raw often does not on Pages
+        const res = await fetch(
+          `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+          { signal: AbortSignal.timeout(20000) }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const text = data.contents || "";
+        if (!text || text.length < 5) throw new Error("Empty proxy body");
+        if (/^\s*<!DOCTYPE html/i.test(text)) throw new Error("Proxy returned HTML");
+        return text;
+      },
+      async (u) => {
+        const res = await fetch(
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+          { signal: AbortSignal.timeout(20000) }
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         if (!text || text.length < 5) throw new Error("Empty proxy body");
-        // corsproxy sometimes returns an HTML interstitial
         if (/^\s*<!DOCTYPE html/i.test(text)) throw new Error("Proxy returned HTML");
         return text;
+      },
+    ];
+    let lastErr;
+    for (const run of attempts) {
+      try {
+        return await run(url);
       } catch (err) {
         lastErr = err;
       }
@@ -758,8 +774,8 @@
 
   const DEFAULT_CHANNEL = {
     handle: "@HotMakesLive",
-    channelId: "UCeqoSThyqiZgIMhGBCCLLcg",
-    fallbackIds: [
+    // Baked-in recent uploads — avoids CORS proxies on GitHub Pages
+    videoIds: [
       "N-eFoXRFbo4",
       "sE5z7ifB_aw",
       "n3H5GcRNRm8",
@@ -784,18 +800,6 @@
     return ids[Math.floor(Math.random() * ids.length)];
   }
 
-  async function fetchChannelVideoIds() {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${DEFAULT_CHANNEL.channelId}`;
-    try {
-      const xml = await fetchViaProxy(rssUrl);
-      const ids = [...xml.matchAll(/<yt:videoId>([\w-]{11})<\/yt:videoId>/g)].map((m) => m[1]);
-      if (ids.length) return ids;
-    } catch (err) {
-      console.warn("Channel RSS failed", err);
-    }
-    return DEFAULT_CHANNEL.fallbackIds.slice();
-  }
-
   async function bootDefaultVideo() {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get("v");
@@ -807,8 +811,7 @@
     }
 
     setStatus(`Picking a random ${DEFAULT_CHANNEL.handle} video…`);
-    const ids = await fetchChannelVideoIds();
-    const id = pickRandom(ids);
+    const id = pickRandom(DEFAULT_CHANNEL.videoIds);
     els.url.value = `https://www.youtube.com/watch?v=${id}`;
     await loadVideo();
   }
