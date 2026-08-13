@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Big Mouth Billy Bass Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="room">
+    <header class="brand">
+      <h1>Big Mouth Billy Bass</h1>
+      <p class="tagline">Fish whut talks on YouTube.</p>
+    </header>
+
+    <main class="stage">
+      <div class="plaque-wrap" id="plaqueWrap">
+        <div class="billy" id="fish">
+          <img
+            id="billyFrame"
+            class="billy-frame"
+            src="assets/anim/f001.png"
+            alt="Big Mouth Billy Bass"
+            draggable="false"
+          />
+          <button type="button" class="red-btn" id="redBtn" aria-label="Play Billy Bass" title="Press to sing"></button>
+        </div>
+
+        <div class="speech" id="speech" hidden>
+          <p id="speechText"></p>
+        </div>
+      </div>
+
+      <div class="player-box">
+        <div id="player"></div>
+        <p class="player-hint" id="playerHint">Load a video, then hit the red button.</p>
+      </div>
+
+      <aside class="panel">
+        <label class="field-label" for="ytUrl">YouTube link</label>
+        <div class="url-row">
+          <input
+            type="url"
+            id="ytUrl"
+            placeholder="Random from @HotMakesLive — or paste your own"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="button" class="load-btn" id="loadBtn">Load</button>
+        </div>
+
+        <div class="status" id="status" role="status">Waiting for a YouTube link…</div>
+
+        <div class="meta" id="meta" hidden>
+          <div><span>Captions</span><strong id="capStatus">—</strong></div>
+          <div><span>Words</span><strong id="wordCount">—</strong></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="app.js"></script>
+</body>
+</html>

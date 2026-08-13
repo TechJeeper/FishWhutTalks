@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+*.log
+tools/
+assets/gifs/
+assets/frames/
+assets/poses/
+assets/billy-anim.gif
+assets/billy-talking-raw.png
+assets/billy-body.png
+assets/billy-talking-closed.png
+assets/billy-source.gif
