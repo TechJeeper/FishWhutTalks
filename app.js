@@ -210,13 +210,22 @@
       const tokens = cleaned.split(/\s+/).filter(Boolean);
       if (!tokens.length) continue;
       const span = Math.max(seg.end - seg.start, 0.05);
-      const weights = tokens.map((t) => Math.max(t.replace(/[^\w']/g, "").length, 1));
+
+      const weights = tokens.map((t) => {
+        // Exclude tokens that are purely non-spoken like [music], (applause), ♪, or Speaker:
+        const isNonSpoken = /^\[.*\]$/.test(t) || /^\(.*\)$/.test(t) || /^[♪♫]+$/.test(t) || /^[A-Za-z]+:/.test(t);
+        if (isNonSpoken) return 0;
+        return Math.max(t.replace(/[^\w']/g, "").length, 1);
+      });
+
       const total = weights.reduce((a, b) => a + b, 0);
       let t = seg.start;
       const wordsInSeg = [];
       tokens.forEach((token, i) => {
-        const dur = (weights[i] / total) * span;
-        const w = { start: t, end: t + dur, text: token };
+        const portion = total > 0 ? (weights[i] / total) : (1 / tokens.length);
+        const dur = portion * span;
+        const isSpoken = weights[i] > 0;
+        const w = { start: t, end: t + dur, text: token, isSpoken };
         wordsInSeg.push(w);
         result.push(w);
         t += dur;
@@ -569,6 +578,11 @@
     return found;
   }
 
+  function totalSpokenInCue(cue) {
+    if (!cue || !cue.words) return 0;
+    return cue.words.filter((w) => w.isSpoken).length;
+  }
+
   function findCue(time) {
     return cues.find((c) => time >= c.start && time <= c.end) || null;
   }
@@ -647,7 +661,7 @@
       } else if (billy.phase === "talking") {
         const cue = words.length ? findCue(time) : null;
         const active = words.length ? findActive(time) : null;
-        const speaking = !!(cue || active) || !words.length;
+        const speaking = (active && active.isSpoken) || (!active && cue && totalSpokenInCue(cue) > 0) || !words.length;
         if (speaking) {
           if (now - billy.lastStep > 70) {
             billy.lastStep = now;
