@@ -223,12 +223,20 @@
       const wordsInSeg = [];
       tokens.forEach((token, i) => {
         const portion = total > 0 ? (weights[i] / total) : (1 / tokens.length);
-        const dur = portion * span;
+        const proportionalDur = portion * span;
+
+        // Cap the duration based on word length to prevent drawn-out talking during silence
+        const maxDur = weights[i] * 0.15 + 0.1;
+        const dur = Math.min(proportionalDur, maxDur);
         const isSpoken = weights[i] > 0;
         const w = { start: t, end: t + dur, text: token, isSpoken };
         wordsInSeg.push(w);
         result.push(w);
-        t += dur;
+        // Advance time. If it was proportional, it would fill the span.
+        // We advance by proportionalDur so that words are spaced out instead of squished at the beginning,
+        // or we advance by dur + small gap. Let's space them proportionally to match natural pacing.
+        // Actually, if we advance by dur, they cluster at the start, which matches when the words are actually said.
+        t += (dur < proportionalDur) ? dur + 0.1 : proportionalDur;
       });
       cues.push({ start: seg.start, end: seg.end, text: cleaned, words: wordsInSeg });
     }
@@ -578,10 +586,7 @@
     return found;
   }
 
-  function totalSpokenInCue(cue) {
-    if (!cue || !cue.words) return 0;
-    return cue.words.filter((w) => w.isSpoken).length;
-  }
+
 
   function findCue(time) {
     return cues.find((c) => time >= c.start && time <= c.end) || null;
@@ -661,7 +666,7 @@
       } else if (billy.phase === "talking") {
         const cue = words.length ? findCue(time) : null;
         const active = words.length ? findActive(time) : null;
-        const speaking = (active && active.isSpoken) || (!active && cue && totalSpokenInCue(cue) > 0) || !words.length;
+        const speaking = (active && active.isSpoken) || !words.length;
         if (speaking) {
           if (now - billy.lastStep > 70) {
             billy.lastStep = now;
