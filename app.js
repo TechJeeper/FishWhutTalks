@@ -61,6 +61,7 @@
         ...(m.turnOut || []),
         ...(m.turnIn || []),
         ...(m.talkCycle || []),
+        ...(m.tailCycle || []),
       ]);
       preloadFrames([...all]);
       showFrame(m.rest);
@@ -664,9 +665,8 @@
           }
         }
       } else if (billy.phase === "talking") {
-        const cue = words.length ? findCue(time) : null;
         const active = words.length ? findActive(time) : null;
-        const speaking = (active && active.isSpoken) || !words.length;
+        const speaking = !!(active && active.isSpoken);
         if (speaking) {
           if (now - billy.lastStep > 70) {
             billy.lastStep = now;
@@ -675,7 +675,14 @@
             showFrame(cycle[billy.chatter]);
           }
         } else {
-          showFrame(m.talkClosed);
+          const tailCycle = m.tailCycle || [m.talkClosed];
+          if (now - billy.lastStep > 100) {
+            billy.lastStep = now;
+            billy.chatter = (billy.chatter + 1) % tailCycle.length;
+            showFrame(tailCycle[billy.chatter]);
+          } else if (!tailCycle.length) {
+            showFrame(m.talkClosed);
+          }
         }
       }
     }
